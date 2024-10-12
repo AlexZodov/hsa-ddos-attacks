@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  attacker:
+    build:
+      context: .
+      dockerfile: ./docker/attacker/Dockerfile
+    container_name: attacker
+    networks:
+      ddos_attacks_net:
+        ipv4_address: 172.16.30.2
+    depends_on:
+      - victim_non_shielded
+      - victim_shielded
+  
+  victim_non_shielded:
+    image: nginx:alpine
+    container_name: victim_non_shielded
+    volumes:
+      - ./resource/home.html:/var/www/html/index.html
+      - ./docker/non_shielded_nginx/victim_non_shielded.conf:/etc/nginx/nginx.conf
+    ports:
+      - "8080:80"
+    networks:
+      ddos_attacks_net:
+        ipv4_address: 172.16.30.3
+  
+  victim_shielded:
+#    image: nginx:alpine
+    build:
+      context: ./docker/shielded_nginx
+    privileged: true  # Add this line
+    container_name: victim_shielded
+    volumes:
+      - ./resource/home.html:/var/www/html/index.html
+      - ./docker/shielded_nginx/victim_shielded.conf:/etc/nginx/nginx.conf
+    ports:
+      - "8081:81"
+    networks:
+      ddos_attacks_net:
+        ipv4_address: 172.16.30.4
+
+networks:
+  ddos_attacks_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.30.0/24
+          gateway: 172.16.30.1
